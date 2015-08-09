@@ -3,6 +3,21 @@ var app = express();
 var morgan = require("morgan");
 var server = require("http").Server(app);
 var io = require("socket.io")(server);
+/* var vantage = require("vantage")();
+
+
+vantage
+  .command("foo")
+  .description("Plop")
+  .action(function (args, callback) {
+    this.log("plop");
+    callback();
+  });
+
+vantage
+  .delimiter("beam.io $ ")
+  .show();
+*/
 
 app.use(morgan("tiny"));
 app.use(express.static('statics'));
@@ -17,9 +32,17 @@ server.listen(1337, function () {
   console.log("Listening on port " + port);
 });
 
+var ships = {};
 io.on("connection", function (socket) {
-  console.log("New sio client.");
-  socket.on("welcome", function (datas) {
-    
+  socket.on("newPlayer", function (datas) {
+    ships["id"] = datas;
+    datas["id"] = socket.id;
+    socket.broadcast.emit("newPlayer", datas);
+  });
+
+  socket.on("updateInformations", function (datas) {
+    datas["id"] = socket.id;
+    ships["id"] = datas;
+    socket.broadcast.emit("updateInformations", datas);
   });
 });
