@@ -14,6 +14,7 @@ var Ship = function (datas) {
   var width = 256;
   var height = 256;
 
+  this.id = datas.id;
   this.name = datas.name;
   this.body = new p2.Body({
     position: [datas.position.x, datas.position.y],
@@ -31,9 +32,37 @@ var Ship = function (datas) {
 Ship.prototype.format = function () {
   return {
     position: this.body.position,
-    name: this.name
+    name: this.name,
+    id: this.id
   };
-}
+};
+
+Ship.prototype.angleToPointer = function (pointer) {
+  var dx = pointer.x - this.body.position.x;
+  var dy = pointer.y - this.body.position.y;
+
+  return Math.atan2(dy, dx);
+};
+
+Ship.prototype.distanceToPointer = function (pointer) {
+  var dx = this.body.position.x - pointer.x;
+  var dy = this.body.position.y - pointer.y;
+
+  return Math.sqrt(dx * dx + dy * dy);
+};
+
+Ship.prototype.moveToPointer = function (pointer) {
+  var time  = 300; // Time to reach the pointer
+  var angle = this.angleToPointer(pointer);
+  var speed = this.distanceToPointer(pointer) / (time / 1000);
+
+  this.body.velocity = [
+    Math.cos(angle) * speed, // X Velocity
+    Math.sin(angle) * speed  // Y Velocity
+  ];
+
+  return angle;
+};
 
 vantage
   .command("clients")
@@ -68,21 +97,36 @@ server.listen(1337, function () {
   console.log("Listening on port " + port);
 });
 
+
+var timeStep = 1 / 60; // Seconds for physics calculation
+setInterval(function () {
+  world.step(timeStep);
+}, 1000 * timeStep);
+
 io.on("connection", function (socket) {
   socket.emit("playerList", ships);
 
   socket.on("newPlayer", function (datas) {
-    ships[socket.id] = new Ship(datas);
     datas["id"] = socket.id;
+    ships[socket.id] = new Ship(datas);
     socket.broadcast.emit("newPlayer", datas);
   });
 
   socket.on("setMouse", function (mouse) {
-    socket.emit("setPosition", ships[socket.id].format());
+    var ship = ships[socket.id];
+    ship.moveToPointer(mouse);
   });
 
   socket.on("disconnect", function () {
     socket.broadcast.emit("disconnectedPlayer", socket.id);
     delete ships[socket.id];
   });
+
+  setInterval(function () {
+    if (!ships[socket.id]) {
+      return false;
+    }
+    console.log("sending position" , ships[socket.id].format());
+    socket.emit("setPosition", ships[socket.id].format());
+  }, 1000 * timeStep);
 });
