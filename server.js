@@ -3,21 +3,22 @@ var app = express();
 var morgan = require("morgan");
 var server = require("http").Server(app);
 var io = require("socket.io")(server);
-/* var vantage = require("vantage")();
+var vantage = require("vantage")();
+var ships = {};
 
 
 vantage
-  .command("foo")
-  .description("Plop")
+  .command("clients")
+  .description("List connected clients")
   .action(function (args, callback) {
-    this.log("plop");
+    this.log(JSON.stringify(ships));
     callback();
   });
 
 vantage
   .delimiter("beam.io $ ")
   .show();
-*/
+
 
 app.use(morgan("tiny"));
 app.use(express.static('statics'));
@@ -32,17 +33,28 @@ server.listen(1337, function () {
   console.log("Listening on port " + port);
 });
 
-var ships = {};
 io.on("connection", function (socket) {
+  socket.emit("playerList", ships);
+
   socket.on("newPlayer", function (datas) {
-    ships["id"] = datas;
+    ships[socket.id] = {};
+    for (var key in datas) {
+      ships[socket.id][key] = datas[key];
+    }
     datas["id"] = socket.id;
     socket.broadcast.emit("newPlayer", datas);
   });
 
   socket.on("updateInformations", function (datas) {
+    for (var key in datas) {
+      ships[socket.id][key] = datas[key];
+    }
     datas["id"] = socket.id;
-    ships["id"] = datas;
     socket.broadcast.emit("updateInformations", datas);
+  });
+
+  socket.on("disconnect", function () {
+    socket.broadcast.emit("disconnectedPlayer", socket.id);
+    delete ships[socket.id];
   });
 });
