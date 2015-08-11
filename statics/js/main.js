@@ -26,9 +26,12 @@
     ships[player_informations.id] = newShip;
   });
 
-  socket.on("setPosition", function (informations) {
-    player_ship.sprite.x = informations.position[0];
-    player_ship.sprite.y = informations.position[1];
+  socket.on("updatePosition", function (informations) {
+    for (var i = 0; i < informations.length; i++) {
+      var ship = ships[informations[0].id];
+      ship.sprite.x = informations[0].position[0];
+      ship.sprite.y = informations[0].position[1];
+    }
   });
 
   socket.on("disconnectedPlayer", function (id) {
@@ -45,6 +48,7 @@
     game.stage.backgroundColor = "black";
 
     player_ship = new Ship("fooBar");
+    ships[socket.id] = player_ship;
 
     game.physics.enable(player_ship.sprite, Phaser.Physics.ARCADE);
     player_ship.mainShip = true;

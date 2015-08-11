@@ -101,6 +101,11 @@ server.listen(1337, function () {
 var timeStep = 1 / 30; // Seconds for physics calculation
 setInterval(function () {
   world.step(timeStep);
+  var positions = [];
+  for (var ship_id in ships) {
+    positions.push(ships[ship_id].format());
+  }
+  io.sockets.emit("updatePosition", positions);
 }, 1000 * timeStep);
 
 io.on("connection", function (socket) {
@@ -121,11 +126,4 @@ io.on("connection", function (socket) {
     socket.broadcast.emit("disconnectedPlayer", socket.id);
     delete ships[socket.id];
   });
-
-  setInterval(function () {
-    if (!ships[socket.id]) {
-      return false;
-    }
-    socket.emit("setPosition", ships[socket.id].format());
-  }, 1000 * timeStep);
 });
