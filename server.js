@@ -38,15 +38,15 @@ Ship.prototype.format = function () {
 };
 
 Ship.prototype.angleToPointer = function (pointer) {
-  var dx = pointer.x - this.body.position.x;
-  var dy = pointer.y - this.body.position.y;
+  var dx = pointer.x - this.body.position[0];
+  var dy = pointer.y - this.body.position[1];
 
   return Math.atan2(dy, dx);
 };
 
 Ship.prototype.distanceToPointer = function (pointer) {
-  var dx = this.body.position.x - pointer.x;
-  var dy = this.body.position.y - pointer.y;
+  var dx = this.body.position[0] - pointer.x;
+  var dy = this.body.position[1] - pointer.y;
 
   return Math.sqrt(dx * dx + dy * dy);
 };
@@ -98,7 +98,7 @@ server.listen(1337, function () {
 });
 
 
-var timeStep = 1 / 60; // Seconds for physics calculation
+var timeStep = 1 / 30; // Seconds for physics calculation
 setInterval(function () {
   world.step(timeStep);
 }, 1000 * timeStep);
@@ -126,7 +126,6 @@ io.on("connection", function (socket) {
     if (!ships[socket.id]) {
       return false;
     }
-    console.log("sending position" , ships[socket.id].format());
     socket.emit("setPosition", ships[socket.id].format());
   }, 1000 * timeStep);
 });

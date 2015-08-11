@@ -26,16 +26,9 @@
     ships[player_informations.id] = newShip;
   });
 
-  socket.on("updateInformations", function (datas) {
-    var ship = ships[datas.id];
-
-    if (!ship) {
-      return false;
-    }
-
-    ship.update();
-    ship.sprite.x = datas.position.x;
-    ship.sprite.y = datas.position.y;
+  socket.on("setPosition", function (informations) {
+    player_ship.sprite.x = informations.position[0];
+    player_ship.sprite.y = informations.position[1];
   });
 
   socket.on("disconnectedPlayer", function (id) {
@@ -63,13 +56,18 @@
     });
   }
 
+  var serverTick = 0;
   function update() {
-      player_ship.update();
-      player_ship.sprite.rotation = game.physics.arcade.moveToPointer(
-        player_ship.sprite,
-        60,
-        game.input.activePointer,
-        300) + ((3 * Math.PI) * 0.5);
+    player_ship.update();
+    serverTick++;
+
+    if (serverTick >= 8) {
+      socket.emit("setMouse", {
+        x: game.input.activePointer.x,
+        y: game.input.activePointer.y
+      });
+      serverTick = 0;
+    }
   }
 
   function render() {

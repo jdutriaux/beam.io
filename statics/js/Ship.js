@@ -27,27 +27,9 @@ var Ship = function (playerName, position, sprite_id) {
   this.lastPush = 0;
 };
 
-Ship.prototype.sendInformations = function () {
-  socket.emit("updateInformations", {
-    position :this.sprite.position,
-    angle: this.sprite.angle
-  });
-};
-
 Ship.prototype.update = function () {
   this.label.x = this.sprite.x;
   this.label.y = this.sprite.y;
-
-  if (!this.mainShip) {
-    return;
-  }
-
-  this.lastPush++;
-
-  if (this.lastPush >= 6) {
-    this.lastPush = 0;
-    this.sendInformations();
-  }
 };
 
 Ship.prototype.destroy = function () {
