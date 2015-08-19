@@ -16,6 +16,7 @@ var Ship = function (datas) {
   var width = 256;
   var height = 256;
 
+  this.angle = 0;
   this.id = datas.id;
   this.name = datas.name;
   this.body = new p2.Body({
@@ -34,6 +35,7 @@ var Ship = function (datas) {
 Ship.prototype.format = function () {
   return {
     position: this.body.position,
+    angle: this.angle,
     name: this.name,
     id: this.id
   };
@@ -63,7 +65,7 @@ Ship.prototype.moveToPointer = function (pointer) {
     Math.sin(angle) * speed  // Y Velocity
   ];
 
-  return angle;
+  this.angle = angle;
 };
 
 vantage
@@ -93,7 +95,7 @@ app.get("/", function (req, res) {
   res.render("index");
 });
 
-server.listen(1337, function () {
+server.listen(80, "0.0.0.0", function () {
   var port = server.address().port;
   console.log("Listening on port " + port);
 });
@@ -122,7 +124,11 @@ updatePositions();
 
 function broadcast (datas, excludedSocket) {
   wss.clients.forEach(function (client) {
-    if (client !== excludedSocket) client.send(datas);
+    try {
+      if (client !== excludedSocket) client.send(datas);
+    } catch (e) {
+      console.log(e);
+    }
   });
 }
 
@@ -136,21 +142,22 @@ wss.on("connection", function (socket) {
   socket.id = uuid.v4();
   console.log("New WS client");
 
-  var welcomeObject = {
-    type: "welcome",
-    id: socket.id,
-    players: []
-  };
-
-  forEachShip(function (ship) {
-    welcomeObject.players.push(ship.format());
-  });
-
-  socket.send(JSON.stringify(welcomeObject));
-
   socket.on("message", function (message) {
     message = JSON.parse(message);
     switch (message.type) {
+      case "join":
+        var welcomeObject = {
+          type: "welcome",
+          id: socket.id,
+          players: []
+        };
+
+        forEachShip(function (ship) {
+          welcomeObject.players.push(ship.format());
+        });
+
+        socket.send(JSON.stringify(welcomeObject));
+        break;
       case "newPlayer":
         message["id"] = socket.id;
         ships[socket.id] = new Ship(message);

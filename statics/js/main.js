@@ -1,5 +1,5 @@
 (function () {
-  window.socket = new WebSocket("ws://localhost:8080");
+  window.socket = new WebSocket("ws://" + window.location.hostname + ":8080");
 
   var player_ship;
   var ships = {};
@@ -10,6 +10,18 @@
     render: render
   };
   var rawPlayers;
+  var name;
+  var nameChooseBtn = document.querySelector("#nameChoose button");
+  nameChooseBtn.addEventListener("click", function () {
+    var input = document.querySelector("#nameChoose input");
+    var nameChooseDiv = document.querySelector("#nameChoose");
+    var welcomeObject = {
+      type: "join"
+    };
+    name = input.value;
+    socket.send(JSON.stringify(welcomeObject));
+    nameChooseDiv.parentElement.removeChild(nameChooseDiv);
+  });
 
   socket.onmessage = function (evt) {
     var msg = JSON.parse(evt.data);
@@ -24,7 +36,7 @@
         addPlayer(msg);
         break;
       case "disconnectedPlayer":
-        removePlayer(msg);
+        removePlayer(msg.id);
         break;
       case "updatePositions":
         updatePositions(msg.positions);
@@ -54,6 +66,7 @@
       if (ship) {
         ship.sprite.x = informations[i].position[0];
         ship.sprite.y = informations[i].position[1];
+        ship.sprite.rotation = informations[i].angle + ((3 * Math.PI) * .5);
       }
     }
   }
@@ -71,7 +84,7 @@
     game.physics.startSystem(Phaser.Physics.ARCADE);
     game.stage.backgroundColor = "black";
 
-    player_ship = new Ship("fooBar");
+    player_ship = new Ship(name);
     ships[socket.id] = player_ship;
 
     game.physics.enable(player_ship.sprite, Phaser.Physics.ARCADE);

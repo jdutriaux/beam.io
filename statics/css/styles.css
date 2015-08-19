@@ -1,4 +1,63 @@
+@font-face {
+  font-family: "Eurofighter";
+  src: url("/fonts/eurofighter.ttf");
+}
+
 body {
   background: #2d2d2d;
-  color: #c9c9c9;
+  color: gainsboro;
+}
+
+#banner {
+  margin: auto;
+  width: 800px;
+  text-align: center;
+  color: white;
+  font-family: "Eurofighter";
+  margin-bottom: 20px;
+}
+
+#banner h1 {
+  font-size: 32pt;
+  margin-bottom: 5px;
+  text-shadow: 0px 0px 10px #FF0000;
+}
+
+#game {
+  margin: auto;
+  width: 800px;
+  height: 600px;
+  border: 2px yellow dashed;
+  cursor: crosshair;
+  position: relative;
+}
+
+#nameChoose {
+  color: white;
+  text-align: center;
+  float: left;
+  position: absolute;
+  background: rgba(255, 255, 255, 0.3);
+  border: 1px solid gainsboro;
+  border-radius: 3px;
+  width: 300px;
+  left: 245px;
+  top: 220px;
+  height: 150px;
+  margin: auto;
+  padding: 10px;
+}
+
+#nameChoose input {
+  background: grey;
+  border-radius: 0px;
+  border: 1px solid white;
+  color: yellow;
+}
+
+#nameChoose button {
+  background: yellow;
+  border: none;
+  margin-top: 20px;
+  color: black;
 }
