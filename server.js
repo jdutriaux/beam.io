@@ -2,9 +2,11 @@ var express = require("express");
 var app     = express();
 var morgan  = require("morgan");
 var server  = require("http").Server(app);
-var io      = require("socket.io")(server);
+var WebSocketServer = require("ws").Server;
+var wss = new WebSocketServer({port: 8080});
 var vantage = require("vantage")();
 var p2      = require("./statics/js/p2.js");
+var uuid    = require("uuid");
 var world   = new p2.World({
   gravity: [0, 0]
 });
@@ -70,12 +72,11 @@ vantage
   .action(function (args, callback) {
     var str = "";
     var i = 0;
-    for (var ship_id in ships) {
-      var ship = ships[ship_id];
+    forEachShip(function (ship, ship_id) {
       str += "\t["+ i +"] " + ship_id + " : " + ship.name +
-             " [" + ship.position.x.toFixed(2) + ";" + ship.position.y.toFixed(2) + "]\n";
+             " [" + ship.body.position[0].toFixed(2) + ";" + ship.body.position[1].toFixed(2) + "]\n";
       i++;
-    }
+    });
     this.log(str);
     callback();
   });
@@ -99,31 +100,75 @@ server.listen(1337, function () {
 
 
 var timeStep = 1 / 30; // Seconds for physics calculation
-setInterval(function () {
+
+function updatePositions () {
   world.step(timeStep);
+
   var positions = [];
+  var msg = {
+    type: "updatePositions",
+    positions: positions
+  };
+
   for (var ship_id in ships) {
     positions.push(ships[ship_id].format());
   }
-  io.sockets.emit("updatePosition", positions);
-}, 1000 * timeStep);
 
-io.on("connection", function (socket) {
-  socket.emit("playerList", ships);
+  broadcast(JSON.stringify(msg));
+  setTimeout(updatePositions, 1000 * timeStep);
+}
 
-  socket.on("newPlayer", function (datas) {
-    datas["id"] = socket.id;
-    ships[socket.id] = new Ship(datas);
-    socket.broadcast.emit("newPlayer", datas);
+updatePositions();
+
+function broadcast (datas, excludedSocket) {
+  wss.clients.forEach(function (client) {
+    if (client !== excludedSocket) client.send(datas);
+  });
+}
+
+function forEachShip (callback) {
+  for (var ship_id in ships) {
+    callback(ships[ship_id], ship_id);
+  }
+}
+
+wss.on("connection", function (socket) {
+  socket.id = uuid.v4();
+  console.log("New WS client");
+
+  var welcomeObject = {
+    type: "welcome",
+    id: socket.id,
+    players: []
+  };
+
+  forEachShip(function (ship) {
+    welcomeObject.players.push(ship.format());
   });
 
-  socket.on("setMouse", function (mouse) {
-    var ship = ships[socket.id];
-    ship.moveToPointer(mouse);
+  socket.send(JSON.stringify(welcomeObject));
+
+  socket.on("message", function (message) {
+    message = JSON.parse(message);
+    switch (message.type) {
+      case "newPlayer":
+        message["id"] = socket.id;
+        ships[socket.id] = new Ship(message);
+        broadcast(JSON.stringify(message), socket);
+        break;
+      case "setMouse":
+        var ship = ships[socket.id];
+        ship.moveToPointer(message);
+        break;
+    }
   });
 
-  socket.on("disconnect", function () {
-    socket.broadcast.emit("disconnectedPlayer", socket.id);
+  socket.on("close", function () {
+    var closeMessage = {
+      type: "disconnectedPlayer",
+      id: socket.id
+    };
     delete ships[socket.id];
+    broadcast(JSON.stringify(closeMessage), socket);
   });
 });
