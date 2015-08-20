@@ -12,14 +12,14 @@
   var rawPlayers;
   var name;
   var nameChooseBtn = document.querySelector("#nameChoose button");
+
   nameChooseBtn.addEventListener("click", function () {
     var input = document.querySelector("#nameChoose input");
     var nameChooseDiv = document.querySelector("#nameChoose");
-    var welcomeObject = {
-      type: "join"
-    };
+    var welcomeMsg = new Message("join");
+    welcomeMsg.set("name", input.value);
+    welcomeMsg.send();
     name = input.value;
-    socket.send(JSON.stringify(welcomeObject));
     nameChooseDiv.parentElement.removeChild(nameChooseDiv);
   });
 
@@ -30,7 +30,6 @@
         socket.id = msg.id;
         window.game = new Phaser.Game(800, 600, Phaser.AUTO, "game", game_functions);
         rawPlayers = msg.players;
-        console.log(rawPlayers);
         break;
       case "newPlayer":
         addPlayer(msg);
@@ -90,13 +89,14 @@
     game.physics.enable(player_ship.sprite, Phaser.Physics.ARCADE);
     player_ship.mainShip = true;
     player_ship.sprite.body.allowRotation = false;
-    var sendObject = {
-      type: "newPlayer",
+
+    var sendShipMsg = new Message("newPlayer", {
       name: player_ship.name,
       position: player_ship.sprite.position,
       sprite: player_ship.sprite.frame
-    };
-    socket.send(JSON.stringify(sendObject));
+    });
+    sendShipMsg.send();
+
     populatePlayers(rawPlayers);
     rawPlayers = null;
   }
@@ -109,11 +109,11 @@
     serverTick++;
 
     if (serverTick >= 8) {
-      socket.send(JSON.stringify({
-        type: "setMouse",
+      new Message("setMouse", {
         x: game.input.activePointer.x,
         y: game.input.activePointer.y
-      }));
+      }).send();
+
       serverTick = 0;
     }
   }

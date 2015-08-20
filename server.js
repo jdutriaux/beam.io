@@ -95,7 +95,7 @@ app.get("/", function (req, res) {
   res.render("index");
 });
 
-server.listen(80, "0.0.0.0", function () {
+server.listen(1337, "0.0.0.0", function () {
   var port = server.address().port;
   console.log("Listening on port " + port);
 });
@@ -165,7 +165,9 @@ wss.on("connection", function (socket) {
         break;
       case "setMouse":
         var ship = ships[socket.id];
-        ship.moveToPointer(message);
+        if (ship) {
+          ship.moveToPointer(message);
+        }
         break;
     }
   });
