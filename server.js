@@ -7,9 +7,25 @@ var wss = new WebSocketServer({port: 8080});
 var vantage = require("vantage")();
 var p2      = require("./statics/js/p2.js");
 var uuid    = require("uuid");
+
+var width   = 800;
+var height  = 600;
 var world   = new p2.World({
   gravity: [0, 0]
 });
+var bounds  = {
+  left  : new p2.Body({mass: 0, position: [0, 0], angle: Math.PI * 0.5}),
+  right : new p2.Body({mass: 0, position: [width, 0], angle: -Math.PI * 0.5}),
+  top   : new p2.Body({mass: 0, position: [0, 0], angle: -Math.PI}),
+  bottom: new p2.Body({mass: 0, position: [0, height]})
+};
+
+for (var name in bounds) {
+  var bound = bounds[name];
+  bound.addShape(new p2.Plane());
+  world.addBody(bound);
+}
+
 var ships = {};
 
 var Ship = function (datas) {
