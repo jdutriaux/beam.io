@@ -1,19 +1,22 @@
 var express = require("express");
 var app     = express();
-var morgan  = require("morgan");
 var server  = require("http").Server(app);
 var WebSocketServer = require("ws").Server;
 var wss = new WebSocketServer({port: 8080});
-var vantage = require("vantage")();
+var winston = require("winston");
+var expressWinston = require("express-winston");
 var p2      = require("./statics/js/p2.js");
 var uuid    = require("uuid");
 
 var width   = 800;
 var height  = 600;
+var ships   = {};
 var world   = new p2.World({
   gravity: [0, 0]
 });
+var tools   = require("./objects/tools.js")(ships);
 var Ship    = require("./objects/Ship.js")(world, p2);
+var cli     = require("./objects/cli.js")(ships);
 var bounds  = {
   left  : new p2.Body({mass: 0, position: [0, 0], angle: Math.PI * 0.5}),
   right : new p2.Body({mass: 0, position: [width, 0], angle: -Math.PI * 0.5}),
@@ -27,31 +30,32 @@ for (var name in bounds) {
   world.addBody(bound);
 }
 
-var ships = {};
-
-vantage
-  .command("clients")
-  .description("List connected clients")
-  .action(function (args, callback) {
-    var str = "";
-    var i = 0;
-    forEachShip(function (ship, ship_id) {
-      str += "\t["+ i +"] " + ship_id + " : " + ship.name +
-             " [" + ship.body.position[0].toFixed(2) + ";" + ship.body.position[1].toFixed(2) + "]\n";
-      i++;
-    });
-    this.log(str);
-    callback();
+WebSocketServer.prototype.broadcast = function (datas, excludedSocket) {
+  this.clients.forEach(function (client) {
+    try {
+      if (client !== excludedSocket) client.send(datas);
+    } catch (e) {
+      console.log(e);
+    }
   });
+};
 
-vantage
-  .delimiter("beam.io $ ")
-  .show();
+cli.init();
 
-app.use(morgan("tiny"));
+app.use(expressWinston.logger({
+  transports: [
+    new winston.transports.Console({
+      json: false,
+      colorize: true
+    })
+  ],
+  meta: false,
+  msg: "HTTP {{req.method}} {{req.url}}",
+  colorStatus: true,
+  expressFormat: true
+}));
 app.use(express.static('statics'));
 app.set("view engine", "jade");
-
 app.get("/", function (req, res) {
   res.render("index");
 });
@@ -73,31 +77,15 @@ function updatePositions () {
     positions: positions
   };
 
-  for (var ship_id in ships) {
-    positions.push(ships[ship_id].format());
-  }
+  tools.forEachShip(function (ship) {
+    positions.push(ship.format());
+  });
 
-  broadcast(JSON.stringify(msg));
+  wss.broadcast(JSON.stringify(msg));
   setTimeout(updatePositions, 1000 * timeStep);
 }
 
 updatePositions();
-
-function broadcast (datas, excludedSocket) {
-  wss.clients.forEach(function (client) {
-    try {
-      if (client !== excludedSocket) client.send(datas);
-    } catch (e) {
-      console.log(e);
-    }
-  });
-}
-
-function forEachShip (callback) {
-  for (var ship_id in ships) {
-    callback(ships[ship_id], ship_id);
-  }
-}
 
 wss.on("connection", function (socket) {
   socket.id = uuid.v4();
@@ -113,7 +101,7 @@ wss.on("connection", function (socket) {
           players: []
         };
 
-        forEachShip(function (ship) {
+        tools.forEachShip(function (ship) {
           welcomeObject.players.push(ship.format());
         });
 
@@ -122,7 +110,7 @@ wss.on("connection", function (socket) {
       case "newPlayer":
         message["id"] = socket.id;
         ships[socket.id] = new Ship(message);
-        broadcast(JSON.stringify(message), socket);
+        wss.broadcast(JSON.stringify(message), socket);
         break;
       case "setMouse":
         var ship = ships[socket.id];
@@ -139,6 +127,6 @@ wss.on("connection", function (socket) {
       id: socket.id
     };
     delete ships[socket.id];
-    broadcast(JSON.stringify(closeMessage), socket);
+    wss.broadcast(JSON.stringify(closeMessage), socket);
   });
 });
