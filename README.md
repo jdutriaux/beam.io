@@ -1,6 +1,7 @@
 # ![Base ship](https://github.com/MrHalfman/beam.io/raw/master/statics/img/ship_logo.png) beam.io
 
-Multiplayer game based on Socket.IO + Phaser
+Multiplayer game based on WS + Phaser
+
 Control your ship with your mouse and destroy your opponents.
 Survive as long as you can!
 
