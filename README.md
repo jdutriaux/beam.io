@@ -1,3 +1,6 @@
+**Important**
+This project is unfinished and the code is really dirty. I only work on this when i'm bored.
+
 # ![Base ship](https://github.com/MrHalfman/beam.io/raw/master/statics/img/ship_logo.png) beam.io
 
 Multiplayer game based on WS + Phaser
